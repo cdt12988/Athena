@@ -247,6 +247,23 @@ module.exports = {
 				res.json({ success: false, msg: 'Failed to update user\'s hours' })
 			});
 	},
+	changePassword: (req, res) => {
+		User
+			.findById(req.body._id)
+			.populate('trainingInstances')
+			.then(user => {
+				if(!user) return res.json({ success: false, msg: 'User not found.', error: false });
+				user.password = req.body.password;
+				user.save((err, results) => {
+					if(err) console.log('Error updating user password:', err);
+					if(err) return res.json({ success: false, msg: 'Unable to update user\'s password.', error: err });
+					res.json({ success: true, msg: 'User password updated.', user: results });
+				});
+			})
+			.catch(err => {
+				res.json({ success: false, msg: 'Unable to update user\'s password.', error: err });
+			});
+	},
 	search: (req, res) => {
 		User
 			.find({ __organization: req.body.organizationID, $text: { $search: req.body.queryString }})

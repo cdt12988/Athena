@@ -16,6 +16,9 @@ export default {
 	update: user => {
 		return axios.put('/api/auth/user', user);
 	},
+	changePassword: user => {
+		return axios.put('/api/auth/changepassword', user);
+	},
 	addTrainingToExistingUsers: training => {
 		return axios.put('/api/auth/users', training);
 	},

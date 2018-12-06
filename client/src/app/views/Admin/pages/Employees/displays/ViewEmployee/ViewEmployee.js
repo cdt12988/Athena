@@ -20,11 +20,14 @@ class ViewEmployee extends React.Component {
 		completedTraining: { dateCompleted: moment().format('X') },
 		dropdown: false,
 		showModal: false,
-		editEmployee: {},
+		editEmployee: { password: '' },
 		editName: false,
 		editUsername: false,
 		editEmployeeID: false,
 		editTitle: false,
+		editDepartment: false,
+		editPassword: false,
+		editHireDate: false,
 		editRole: false,
 		filters: {
 			upcoming: false,
@@ -42,6 +45,7 @@ class ViewEmployee extends React.Component {
 		const { name, value } = e.target;
 		const state = this.state;
 		state.editEmployee[name] = value;
+		if(name == 'hireDate') state.editEmployee.hireDate = moment(value).format('X');
 		this.setState(state);
 	};
 	
@@ -52,12 +56,16 @@ class ViewEmployee extends React.Component {
 			if(response.data.success) {
 				const user = response.data.user;
 				this.setState({
-					employee: user, editEmployee: Object.assign({}, user),
+					employee: user,
+					editEmployee: Object.assign({}, user),
 					editName: false,
 					editUsername: false,
 					editEmployeeID: false,
 					editTitle: false,
-					editRole: false
+					editRole: false,
+					editDepartment: false,
+					editPassword: false,
+					editHireDate: false
 				});
 			} else {
 				this.setState({ message: response.data.msg });
@@ -75,9 +83,91 @@ class ViewEmployee extends React.Component {
 			editUsername: false,
 			editEmployeeID: false,
 			editTitle: false,
-			editRole: false
-			
+			editRole: false,
+			editDepartment: false,
+			editPassword: false,
+			editHireDate: false
 		});
+	};
+	
+	changePassword = e => {
+		e.preventDefault();
+// 		return console.log(this.state.editEmployee.password);
+		API.auth.changePassword(this.state.editEmployee).then(res => {
+			if(res.data.success) {
+				const user = res.data.user;
+				this.setState({
+					employee: user,
+					editEmployee: Object.assign({}, user),
+					editName: false,
+					editUsername: false,
+					editEmployeeID: false,
+					editTitle: false,
+					editRole: false,
+					editDepartment: false,
+					editPassword: false,
+					editHireDate: false
+				});
+			} else {
+				console.log('Error updating password.', res.data.error);
+				this.setState({ message: res.data.msg });
+			}
+		}).catch(err => {
+			console.log('Error updating password:', err);
+			this.setState({ message: 'Uh Oh! Something went wrong!' });
+		});
+	};
+	
+	checkHireDate = () => {
+		if(this.state.employee.hireDate == 0) this.setState({ editHireDate: true });
+	};
+	
+	toggleEmployeeActive = () => {
+		const fakeObj = {
+			preventDefault: function() { console.log(''); }
+		};
+		const { editEmployee } = this.state;
+		editEmployee.employeeActive = !editEmployee.employeeActive;
+		if(!editEmployee.employeeActive) editEmployee.active = false;
+		if(!editEmployee.employeeActive) editEmployee.role = 1;
+		this.setState({ editEmployee: editEmployee });
+		this.onSubmit(fakeObj);
+	};
+	
+	toggleActive = () => {
+		const fakeObj = {
+			preventDefault: function() { console.log(''); }
+		};
+		const { editEmployee } = this.state;
+		editEmployee.active = !editEmployee.active;
+		if(editEmployee.active) editEmployee.employeeActive = true;
+		if(!editEmployee.active) editEmployee.role = 1;
+		this.setState({ editEmployee: editEmployee });
+		this.onSubmit(fakeObj);
+	};
+	
+	toggleRole = () => {
+		const fakeObj = {
+			preventDefault: function() { console.log(''); }
+		};
+		const { editEmployee } = this.state;
+		if(editEmployee.active) {
+			switch(editEmployee.role) {
+				case 1:
+					editEmployee.role = 2;
+					break;
+				case 2:
+					editEmployee.role = 1;
+					break;
+				case 3:
+					return this.setState({ message: 'Unable to change that user\'s permission levels.' });
+			}
+			
+			this.setState({ editEmployee: editEmployee });
+			this.onSubmit(fakeObj);
+		} else {
+			this.setState({ message: 'Must first activate user\'s account before changing permission levels.' });
+		}
 	};
 	
 	getEmployee = () => {
@@ -390,6 +480,9 @@ class ViewEmployee extends React.Component {
 		if(filters.overdue) filteredTrainingInstances = snapshot.overdueTrainings;
 		if(filters.completed) filteredTrainingInstances = snapshot.completedTrainings;
 		if(filters.none) filteredTrainingInstances = employee.trainingInstances;
+
+		if(editEmployee.password.substr(0, 6) == '$2a$10') editEmployee.password = '';
+		
 		
 		return (
 			<div>
@@ -433,7 +526,7 @@ class ViewEmployee extends React.Component {
 				  <div id = "profileInfo-wrapper" className="col s7">
 				     <h5 id = "employeeView"><strong>{ employee.fname } { employee.lname }</strong></h5>
 					 <h5 id = "titleView"><strong>{ employee.title }</strong></h5>
-					 <h5 id = "roleView"><strong>{ this.employeeRole() }</strong></h5>
+					 <h5 id = "roleView" className='cursor-pointer' onClick={this.toggleRole}><strong>{ this.employeeRole() }</strong></h5>
 					 <span id = "dots-container" className = "card-title activator grey-text text-darken-4">
 				      <i id = "dots" className = "material-icons">event_note</i>  View Trainings</span>
 				  </div>
@@ -461,7 +554,7 @@ class ViewEmployee extends React.Component {
 						  <button className = "save" type='submit'>Save</button>
 						</form>
 					:	<div onClick={() => this.setState({ editName: true })}>
-							<h6>{/*(employee.fname && employee.lname) ? `${employee.fname} ${employee.lname}` : 'unknown'*/}{employee.fname} {employee.lname}
+							<h6>Name: {/*(employee.fname && employee.lname) ? `${employee.fname} ${employee.lname}` : 'unknown'*/}{employee.fname} {employee.lname}
 							<span ><i id="editIcon" className = "material-icons left">edit</i></span>
 							</h6>
 						</div>
@@ -540,43 +633,93 @@ class ViewEmployee extends React.Component {
 				  </div>
 
 				  {/*Department*/}
-				  <div className = "col s4">
-				    <span>Department:
-				    	<span>	{ employee.department
-					    			? <span>{employee.department}</span>
-					    			: <span>Not on file</span>
-				    			}
-				    	</span>
-				    	<i id="Icon" className = "material-icons left">group_work</i>
-				    </span>
-				  </div>
+				  <div className = "col s4 employee-form-container">
+				  {
+					  this.state.editDepartment
+					  ?		<form className='employee-form' onSubmit={this.onSubmit}>
+							  <div id = "department" className = "input-field col s5">
+							  	<input type='text' name='department' value={editEmployee.department} onChange={this.onChange} />
+							  </div>
+							  <span className='close-btn' onClick={this.cancel}><i class="material-icons">clear</i> </span>
+							  <button className = "save" type='submit'>Save</button>
+							</form>
+					  :		<div onClick={() => this.setState({ editDepartment: true })}>
+							<h6>Department:
+								<span>	{ employee.department
+							    			? <span>{employee.department}</span>
+							    			: <span>Not on file</span>
+						    			}
+						    	</span>
+						    	<i id="Icon" className = "material-icons left">group_work</i>
+						    </h6>
+						  </div>
+					  }
+				    </div>
+				    	
 
 
 				  {/* Password Change */}
-				  <div className = "col s4">
-				    <h6>Change Password<i id="Icon" className = "material-icons left">lock</i></h6>
-				  </div>
+				  <div className = "col s4 employee-form-container">
+				  {
+					  this.state.editPassword
+					  ?		<form className='employee-form' onSubmit={this.changePassword}>
+							  <div id = "password" className = "input-field col s5">
+							  	<input type='text' name='password' value={editEmployee.password} onChange={this.onChange} />
+							  </div>
+							  <span className='close-btn' onClick={this.cancel}><i class="material-icons">clear</i> </span>
+							  <button className = "save" type='submit'>Save</button>
+							</form>
+					  :		<div onClick={() => this.setState({ editPassword: true })}>
+							<h6>Change Password
+						    	<i id="Icon" className = "material-icons left">lock</i>
+						    </h6>
+						  </div>
+					  }
+				    </div>
+				  
 				</div>
 
 				{/* Employee Hire Date */}
 				<div className = "row">
-				<div className = "col s4">
-				    <span>Hire Date: { employee.hireDate > 0
+				
+				<div className = "col s4 employee-form-container">
+				{
+					this.state.editHireDate
+					?	<form className='employee-form' onSubmit={this.onSubmit}>
+							<div id='hireDate' className='input-field col s5'>
+								<input type='date' name='hireDate' onChange={this.onChange} />
+								<span className='close-btn' onClick={this.cancel}><i class="material-icons">clear</i> </span>
+								<button className = "save" type='submit'>Save</button>
+							</div>
+						</form>
+					:	<div onClick={this.checkHireDate}>
+							<h6 id='hireDate-cursor'>Hire Date: { employee.hireDate > 0
+								? <span>{moment(employee.hireDate, 'X').format('MMM DD, YYYY')}</span>
+								: <span>Add Hire Date</span>
+							}
+								<i id='Icon' className='material-icons left'>calendar_today</i>
+							</h6>
+						</div>
+				}
+				</div>
+				   {/* <span>Hire Date: { employee.hireDate > 0
 								    	? <span>{moment(employee.hireDate, 'X').format('MMM DD, YYYY')}</span>
 								    	: <span>Not on file</span>
 								     }
 						<i id="Icon" className = "material-icons left">calendar_today</i>
 					</span>
-				  </div>
+				  </div>*/}
 
 				{/*Employee Status */}
 				<div className = "col s4">
-				  <span>Employee Status: {employee.employeeActive ? 'Active' : 'Inactive'}<i id="statusIcon" className = "material-icons left">verified_user</i> </span>
+				  <span onClick={this.toggleEmployeeActive} className='cursor-pointer'>Employee Status: {employee.employeeActive ? 'Active' : 'Inactive'}
+				  <i id="statusIcon" className = "material-icons left">verified_user</i> </span>
 				</div>
 
 				{/*Account Status*/}
 				<div className = "col s4">
-				  <span>Account Status: {employee.active ? 'Active' : 'Inactive'}<i id="statusIcon" className = "material-icons left">verified_user</i></span>
+				  <span onClick={this.toggleActive} className='cursor-pointer'>Account Status: {employee.active ? 'Active' : 'Inactive'}
+				  <i id="statusIcon" className = "material-icons left">verified_user</i></span>
 				</div>
 			</div>
 			</div>
@@ -655,30 +798,6 @@ class ViewEmployee extends React.Component {
 				
 		   {/*Collection of Employee Trainings - HardCoded*/}
 		   <ul className = "collection">
-		   {/*<li className="collection-item avatar row valign-wrapper employeeCollectionItem">
-					<div className='avatar-wrapper flex-center'>
-						<i className = "material-icons">event_note</i>
-					</div>
-				<div className = "titleTraining">
-		  		   <span className = "trainingTitle">
-				    Training Name
-				   </span>
-				</div>
-
-				<div className = "codeTraining">Training Code</div>
-
-				<div className = "hoursTraining">
-				  <p className = "">Training Hours</p>
-				</div>
-
-				<div className = "trainingFrequency">
-				  <p>Training Frequency</p>
-				</div>
-
-				<div className = "frequencyPeriod">
-				  <p>Completed</p>
-				</div>
-			  </li>*/}
 				{
 					filteredTrainingInstances.map(training => 
 						<li key={training._id} className='collection-item avatar row valign-wrapper employeeCollectionItem'>

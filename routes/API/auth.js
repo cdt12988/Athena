@@ -57,6 +57,11 @@ router.route('/addtrainings')
 		requireLogin(req, res, controller.addTrainingInstances);
 	});
 	
+router.route('/changepassword')
+	.put(passport.authenticate('jwt', { session: false }), (req, res) => {
+		requireLogin(req, res, controller.changePassword);
+	});
+	
 router.route('/search')
 	.post(passport.authenticate('jwt', { session: false }), (req, res) => {
 		requireLogin(req, res, controller.search);

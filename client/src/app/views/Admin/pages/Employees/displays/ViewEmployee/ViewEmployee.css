@@ -224,6 +224,9 @@
 .employee-form-container {
 	max-height: 31px;
 }
+.employee-form-container h6 {
+	cursor: cell;
+}
 .employee-form {
 	display: flex;
 	justify-content: flex-start;
@@ -241,7 +244,7 @@
 	font-size: 0.85em;
 }
 #fname, #lname {
-	width: 30%;
+	width: 30% !important;
 }
 #position {
 	margin: 0;
@@ -253,6 +256,20 @@
 }
 .close-btn {
 	margin: 0 0.5em;
+	cursor: pointer;
+}
+#hireDate {
+	max-height: 31px;
+	display: flex;
+	align-items: center;
+}
+#hireDate input {
+	width: 60%;
+}
+#hireDate-cursor {
+	cursor: default;
+}
+.cursor-pointer {
 	cursor: pointer;
 }
 
